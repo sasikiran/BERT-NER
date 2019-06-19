@@ -1,15 +1,11 @@
 # BERT-NER
 
-
-Use Google's BERT for named entity recognition （CoNLL-2003 as the dataset）.
-
-
-The original version （see old_version for more detail） contains some hard codes and lacks corresponding annotations,which is inconvenient to understand. So in this updated version,there are some new ideas and tricks （On data Preprocessing and layer design） that can help you quickly implement the fine-tuning model (you just need to try to modify crf_layer or softmax_layer).
+Use Google's BERT for named entity recognition（CoNLL-2003 as the dataset.
 
 ### Folder Description:
 ```
 BERT-NER
-|____ bert                          # need git from [here](https://github.com/google-research/bert)
+|____ bert
 |____ cased_L-12_H-768_A-12	    # need download from [here](https://storage.googleapis.com/bert_models/2018_10_18/cased_L-12_H-768_A-12.zip)
 |____ data		            # train data
 |____ middle_data	            # middle data (label id map)
@@ -20,11 +16,13 @@ BERT-NER
 
 ```
 
-
-### Usage:
-```
-bash run_ner.sh
-```
+### Steps:
+1. Clone this repo:
+2. ``cd bert``
+3. ``git clone https://github.com/google-research/bert .``
+4. Download [cased_L-12_H-768_A-12](https://storage.googleapis.com/bert_models/2018_10_18/cased_L-12_H-768_A-12.zip) model and extract it's contents to directory ``cased_L-12_H-768_A-12``.
+5. Install ``tensorflow`` or ``tensorflow-gpu``. Tested on v1.13.1 and python 3.6.8.
+6. From the root directory, run: ``bash run_ner.sh``
 
 ### What's in run_ner.sh:
 ```
@@ -48,8 +46,7 @@ python BERT_NER.py\
 perl conlleval.pl -d '\t' < ./output/result_dir/label_test.txt
 ```
 
-**Notice:** cased model was recommened, according to [this](https://arxiv.org/abs/1810.04805) paper. CoNLL-2003 dataset and perl Script comes from [here](https://www.clips.uantwerpen.be/conll2003/ner/)
-
+**Notice:** According to [this](https://arxiv.org/abs/1810.04805) paper, the cased model was recommended. CoNLL-2003 dataset and perl Script comes from [here](https://www.clips.uantwerpen.be/conll2003/ner/)
 
 ### RESULTS:(On test set)
 #### Parameter setting:
@@ -64,15 +61,8 @@ accuracy:  98.15%; precision:  90.61%; recall:  88.85%; FB1:  89.72
               ORG: precision:  87.83%; recall:  85.18%; FB1:  86.48  1191
               PER: precision:  95.19%; recall:  94.83%; FB1:  95.01  1311
 ```
-### Result description:
-Here i just use the default paramaters, but as Google's paper says a 0.2% error is reasonable(reported 92.4%).
-Maybe some tricks need to be added to the above model.
 
 ### reference:
 
 [1] https://arxiv.org/abs/1810.04805
-
 [2] https://github.com/google-research/bert
-
-
-
