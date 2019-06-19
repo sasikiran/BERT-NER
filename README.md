@@ -1,7 +1,7 @@
-# BERT-NER Version 2
+# BERT-NER
 
 
-Use Google's BERT for named entity recognition （CoNLL-2003 as the dataset）. 
+Use Google's BERT for named entity recognition （CoNLL-2003 as the dataset）.
 
 
 The original version （see old_version for more detail） contains some hard codes and lacks corresponding annotations,which is inconvenient to understand. So in this updated version,there are some new ideas and tricks （On data Preprocessing and layer design） that can help you quickly implement the fine-tuning model (you just need to try to modify crf_layer or softmax_layer).
@@ -14,7 +14,7 @@ BERT-NER
 |____ data		            # train data
 |____ middle_data	            # middle data (label id map)
 |____ output			    # output (final model, predict results)
-|____ BERT_NER.py		    # mian code
+|____ BERT_NER.py		    # main code
 |____ conlleval.pl		    # eval code
 |____ run_ner.sh    		    # run model and eval result
 
@@ -53,10 +53,10 @@ perl conlleval.pl -d '\t' < ./output/result_dir/label_test.txt
 
 ### RESULTS:(On test set)
 #### Parameter setting:
-* do_lower_case=False 
+* do_lower_case=False
 * num_train_epochs=4.0
 * crf=False
-  
+
 ```
 accuracy:  98.15%; precision:  90.61%; recall:  88.85%; FB1:  89.72
               LOC: precision:  91.93%; recall:  91.79%; FB1:  91.86  1387

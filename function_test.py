@@ -8,7 +8,9 @@
 def _read_data(input_file):
     """Read a BIO data!"""
     rf = open(input_file, 'r')
-    lines = []; words = []; labels = []
+    lines = []
+    words = []
+    labels = []
     for line in rf:
         word = line.strip().split(' ')[0]
         label = line.strip().split(' ')[-1]
@@ -23,7 +25,10 @@ def _read_data(input_file):
         labels.append(label)
     return lines
 
+
 def main():
-   lines =  _read_data("./data/train.txt")
-   print(lines)
+    lines = _read_data("./data/train.txt")
+    print(lines)
+
+
 main()

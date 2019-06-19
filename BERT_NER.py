@@ -13,16 +13,15 @@ from __future__ import print_function
 import collections
 import os
 import pickle
-from absl import flags,logging
+from absl import flags, logging
 from bert import modeling
 from bert import optimization
 from bert import tokenization
 import tensorflow as tf
 import metrics
-import numpy as np
 FLAGS = flags.FLAGS
 
-## Required parameters
+# Required parameters
 flags.DEFINE_string(
     "data_dir", None,
     "The input data dir. Should contain the .tsv files (or other data files) "
@@ -42,7 +41,7 @@ flags.DEFINE_string(
     "output_dir", None,
     "The output directory where the model checkpoints will be written.")
 
-## Other parameters
+# Other parameters
 
 flags.DEFINE_string(
     "init_checkpoint", None,
@@ -122,49 +121,53 @@ flags.DEFINE_integer(
 flags.DEFINE_string("middle_output", "middle_data", "Dir was used to store middle data!")
 flags.DEFINE_string("crf", "True", "use crf!")
 
+
 class InputExample(object):
-  """A single training/test example for simple sequence classification."""
+    """ A single training/test example for simple sequence classification. """
 
-  def __init__(self, guid, text, label=None):
-    """Constructs a InputExample.
+    def __init__(self, guid, text, label=None):
+        """ Constructs a InputExample.
 
-    Args:
-      guid: Unique id for the example.
-      text_a: string. The untokenized text of the first sequence. For single
-        sequence tasks, only this sequence must be specified.
-      label: (Optional) string. The label of the example. This should be
-        specified for train and dev examples, but not for test examples.
-    """
-    self.guid = guid
-    self.text = text
-    self.label = label
+        Args:
+          guid: Unique id for the example.
+          text_a: string. The untokenized text of the first sequence. For single
+            sequence tasks, only this sequence must be specified.
+          label: (Optional) string. The label of the example. This should be
+            specified for train and dev examples, but not for test examples.
+        """
+        self.guid = guid
+        self.text = text
+        self.label = label
+
 
 class PaddingInputExample(object):
-  """Fake example so the num input examples is a multiple of the batch size.
+    """Fake example so the num input examples is a multiple of the batch size.
 
-  When running eval/predict on the TPU, we need to pad the number of examples
-  to be a multiple of the batch size, because the TPU requires a fixed batch
-  size. The alternative is to drop the last batch, which is bad because it means
-  the entire output data won't be generated.
+      When running eval/predict on the TPU, we need to pad the number of examples
+      to be a multiple of the batch size, because the TPU requires a fixed batch
+      size. The alternative is to drop the last batch, which is bad because it means
+      the entire output data won't be generated.
 
-  We use this class instead of `None` because treating `None` as padding
-  battches could cause silent errors.
-  """
+      We use this class instead of `None` because treating `None` as padding
+      battches could cause silent errors.
+      """
+
 
 class InputFeatures(object):
-  """A single set of features of data."""
+    """A single set of features of data."""
 
-  def __init__(self,
-               input_ids,
-               mask,
-               segment_ids,
-               label_ids,
-               is_real_example=True):
-    self.input_ids = input_ids
-    self.mask = mask
-    self.segment_ids = segment_ids
-    self.label_ids = label_ids
-    self.is_real_example = is_real_example
+    def __init__(self,
+                 input_ids,
+                 mask,
+                 segment_ids,
+                 label_ids,
+                 is_real_example=True):
+        self.input_ids = input_ids
+        self.mask = mask
+        self.segment_ids = segment_ids
+        self.label_ids = label_ids
+        self.is_real_example = is_real_example
+
 
 class DataProcessor(object):
     """Base class for data converters for sequence classification data sets."""
@@ -182,24 +185,27 @@ class DataProcessor(object):
         raise NotImplementedError()
 
     @classmethod
-    def _read_data(cls,input_file):
+    def _read_data(cls, input_file):
         """Read a BIO data!"""
-        rf = open(input_file,'r')
-        lines = [];words = [];labels = []
+        rf = open(input_file, 'r')
+        lines = []
+        words = []
+        labels = []
         for line in rf:
             word = line.strip().split(' ')[0]
             label = line.strip().split(' ')[-1]
             # here we dont do "DOCSTART" check
-            if len(line.strip())==0 and words[-1] == '.':
+            if len(line.strip()) == 0 and words[-1] == '.':
                 l = ' '.join([label for label in labels if len(label) > 0])
                 w = ' '.join([word for word in words if len(word) > 0])
-                lines.append((l,w))
-                words=[]
+                lines.append((l, w))
+                words = []
                 labels = []
             words.append(word)
             labels.append(label)
         rf.close()
         return lines
+
 
 class NerProcessor(DataProcessor):
     def get_train_examples(self, data_dir):
@@ -212,11 +218,10 @@ class NerProcessor(DataProcessor):
             self._read_data(os.path.join(data_dir, "dev.txt")), "dev"
         )
 
-    def get_test_examples(self,data_dir):
+    def get_test_examples(self, data_dir):
         return self._create_example(
             self._read_data(os.path.join(data_dir, "test.txt")), "test"
         )
-
 
     def get_labels(self):
         """
@@ -224,7 +229,7 @@ class NerProcessor(DataProcessor):
         "[PAD]" for padding
         :return:
         """
-        return ["[PAD]","B-MISC", "I-MISC", "O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "X","[CLS]","[SEP]"]
+        return ["[PAD]", "B-MISC", "I-MISC", "O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "X", "[CLS]", "[SEP]"]
 
     def _create_example(self, lines, set_type):
         examples = []
@@ -252,20 +257,20 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
 
     """
     label_map = {}
-    #here start with zero this means that "[PAD]" is zero
-    for (i,label) in enumerate(label_list):
+    # here start with zero this means that "[PAD]" is zero
+    for (i, label) in enumerate(label_list):
         label_map[label] = i
-    with open(FLAGS.middle_output+"/label2id.pkl",'wb') as w:
-        pickle.dump(label_map,w)
+    with open(FLAGS.middle_output + "/label2id.pkl", 'wb') as w:
+        pickle.dump(label_map, w)
     textlist = example.text.split(' ')
     labellist = example.label.split(' ')
     tokens = []
     labels = []
-    for i,(word,label) in enumerate(zip(textlist,labellist)):
+    for i, (word, label) in enumerate(zip(textlist, labellist)):
         token = tokenizer.tokenize(word)
         tokens.extend(token)
-        for i,_ in enumerate(token):
-            if i==0:
+        for i, _ in enumerate(token):
+            if i == 0:
                 labels.append(label)
             else:
                 labels.append("X")
@@ -287,8 +292,8 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
     # stop tag, because i think its not very necessary.
     # or if add "[SEP]" the model even will cause problem, special the crf layer was used.
     input_ids = tokenizer.convert_tokens_to_ids(ntokens)
-    mask = [1]*len(input_ids)
-    #use zero to padding and you should
+    mask = [1] * len(input_ids)
+    # use zero to padding and you should
     while len(input_ids) < max_seq_length:
         input_ids.append(0)
         mask.append(0)
@@ -316,18 +321,20 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
         label_ids=label_ids,
     )
     # we need ntokens because if we do predict it can help us return to original token.
-    return feature,ntokens,label_ids
+    return feature, ntokens, label_ids
 
-def filed_based_convert_examples_to_features(examples, label_list, max_seq_length, tokenizer, output_file,mode=None):
+
+def filed_based_convert_examples_to_features(examples, label_list, max_seq_length, tokenizer, output_file, mode=None):
     writer = tf.python_io.TFRecordWriter(output_file)
     batch_tokens = []
     batch_labels = []
     for (ex_index, example) in enumerate(examples):
         if ex_index % 5000 == 0:
             logging.info("Writing example %d of %d" % (ex_index, len(examples)))
-        feature,ntokens,label_ids = convert_single_example(ex_index, example, label_list, max_seq_length, tokenizer, mode)
+        feature, ntokens, label_ids = convert_single_example(ex_index, example, label_list, max_seq_length, tokenizer, mode)
         batch_tokens.extend(ntokens)
         batch_labels.extend(label_ids)
+
         def create_int_feature(values):
             f = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
             return f
@@ -341,7 +348,8 @@ def filed_based_convert_examples_to_features(examples, label_list, max_seq_lengt
         writer.write(tf_example.SerializeToString())
     # sentence token in each batch
     writer.close()
-    return batch_tokens,batch_labels
+    return batch_tokens, batch_labels
+
 
 def file_based_input_fn_builder(input_file, seq_length, is_training, drop_remainder):
     name_to_features = {
@@ -351,6 +359,7 @@ def file_based_input_fn_builder(input_file, seq_length, is_training, drop_remain
         "label_ids": tf.FixedLenFeature([seq_length], tf.int64),
 
     }
+
     def _decode_record(record, name_to_features):
         example = tf.parse_single_example(record, name_to_features)
         for name in list(example.keys()):
@@ -377,40 +386,41 @@ def file_based_input_fn_builder(input_file, seq_length, is_training, drop_remain
 # all above are related to data preprocess
 # Following i about the model
 
-def hidden2tag(hiddenlayer,numclass):
-    linear = tf.keras.layers.Dense(numclass,activation=None)
+
+def hidden2tag(hiddenlayer, numclass):
+    linear = tf.keras.layers.Dense(numclass, activation=None)
     return linear(hiddenlayer)
 
-def crf_loss(logits,labels,mask,num_labels,mask2len):
+
+def crf_loss(logits, labels, mask, num_labels, mask2len):
     """
     :param logits:
     :param labels:
     :param mask2len:each sample's length
     :return:
     """
-    #TODO
+    # TODO
     with tf.variable_scope("crf_loss"):
-        trans = tf.get_variable(
-                "transition",
-                shape=[num_labels,num_labels],
-                initializer=tf.contrib.layers.xavier_initializer()
-        )
-    
-    log_likelihood,transition = tf.contrib.crf.crf_log_likelihood(logits,labels,transition_params =trans ,sequence_lengths=mask2len)
-    loss = tf.math.reduce_mean(-log_likelihood)
-   
-    return loss,transition
+        trans = tf.get_variable("transition",
+                                shape=[num_labels, num_labels],
+                                initializer=tf.contrib.layers.xavier_initializer())
 
-def softmax_layer(logits,labels,num_labels,mask):
+    log_likelihood, transition = tf.contrib.crf.crf_log_likelihood(logits, labels, transition_params=trans, sequence_lengths=mask2len)
+    loss = tf.math.reduce_mean(-log_likelihood)
+
+    return loss, transition
+
+
+def softmax_layer(logits, labels, num_labels, mask):
     logits = tf.reshape(logits, [-1, num_labels])
     labels = tf.reshape(labels, [-1])
-    mask = tf.cast(mask,dtype=tf.float32)
+    mask = tf.cast(mask, dtype=tf.float32)
     one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
-    loss = tf.losses.softmax_cross_entropy(logits=logits,onehot_labels=one_hot_labels)
+    loss = tf.losses.softmax_cross_entropy(logits=logits, onehot_labels=one_hot_labels)
     loss *= tf.reshape(mask, [-1])
     loss = tf.reduce_sum(loss)
     total_size = tf.reduce_sum(mask)
-    total_size += 1e-12 # to avoid division by 0 for all-0 weights
+    total_size += 1e-12  # to avoid division by 0 for all-0 weights
     loss /= total_size
     # predict not mask we could filtered it in the prediction part.
     probabilities = tf.math.softmax(logits, axis=-1)
@@ -420,32 +430,31 @@ def softmax_layer(logits,labels,num_labels,mask):
 
 def create_model(bert_config, is_training, input_ids, mask,
                  segment_ids, labels, num_labels, use_one_hot_embeddings):
-    model = modeling.BertModel(
-        config = bert_config,
-        is_training=is_training,
-        input_ids=input_ids,
-        input_mask=mask,
-        token_type_ids=segment_ids,
-        use_one_hot_embeddings=use_one_hot_embeddings
-        )
+    model = modeling.BertModel(config=bert_config,
+                               is_training=is_training,
+                               input_ids=input_ids,
+                               input_mask=mask,
+                               token_type_ids=segment_ids,
+                               use_one_hot_embeddings=use_one_hot_embeddings)
 
     output_layer = model.get_sequence_output()
-    #output_layer shape is
+    # output_layer shape is
     if is_training:
         output_layer = tf.keras.layers.Dropout(rate=0.1)(output_layer)
-    logits = hidden2tag(output_layer,num_labels)
+    logits = hidden2tag(output_layer, num_labels)
     # TODO test shape
-    logits = tf.reshape(logits,[-1,FLAGS.max_seq_length,num_labels])
+    logits = tf.reshape(logits, [-1, FLAGS.max_seq_length, num_labels])
     if FLAGS.crf:
-        mask2len = tf.reduce_sum(mask,axis=1)
-        loss, trans = crf_loss(logits,labels,mask,num_labels,mask2len)
-        predict,viterbi_score = tf.contrib.crf.crf_decode(logits, trans, mask2len)
-        return (loss, logits,predict)
+        mask2len = tf.reduce_sum(mask, axis=1)
+        loss, trans = crf_loss(logits, labels, mask, num_labels, mask2len)
+        predict, viterbi_score = tf.contrib.crf.crf_decode(logits, trans, mask2len)
+        return (loss, logits, predict)
 
     else:
-        loss,predict  = softmax_layer(logits, labels, num_labels, mask)
+        loss, predict = softmax_layer(logits, labels, num_labels, mask)
 
         return (loss, logits, predict)
+
 
 def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu,
@@ -460,19 +469,19 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         label_ids = features["label_ids"]
         is_training = (mode == tf.estimator.ModeKeys.TRAIN)
         if FLAGS.crf:
-            (total_loss, logits,predicts) = create_model(bert_config, is_training, input_ids,
-                                                            mask, segment_ids, label_ids,num_labels, 
-                                                            use_one_hot_embeddings)
+            (total_loss, logits, predicts) = create_model(bert_config, is_training, input_ids,
+                                                          mask, segment_ids, label_ids, num_labels,
+                                                          use_one_hot_embeddings)
 
         else:
             (total_loss, logits, predicts) = create_model(bert_config, is_training, input_ids,
-                                                            mask, segment_ids, label_ids,num_labels, 
-                                                            use_one_hot_embeddings)
+                                                          mask, segment_ids, label_ids, num_labels,
+                                                          use_one_hot_embeddings)
         tvars = tf.trainable_variables()
         scaffold_fn = None
-        initialized_variable_names=None
+        initialized_variable_names = None
         if init_checkpoint:
-            (assignment_map, initialized_variable_names) = modeling.get_assignment_map_from_checkpoint(tvars,init_checkpoint)
+            (assignment_map, initialized_variable_names) = modeling.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
             tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
             if use_tpu:
                 def tpu_scaffold():
@@ -487,10 +496,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
             init_string = ""
             if var.name in initialized_variable_names:
                 init_string = ", *INIT_FROM_CKPT*"
-            logging.info("  name = %s, shape = %s%s", var.name, var.shape,
-                            init_string)
-
-        
+            logging.info("name = %s, shape = %s%s", var.name, var.shape, init_string)
 
         if mode == tf.estimator.ModeKeys.TRAIN:
             train_op = optimization.create_optimizer(total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
@@ -499,15 +505,12 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 loss=total_loss,
                 train_op=train_op,
                 scaffold_fn=scaffold_fn)
-
         elif mode == tf.estimator.ModeKeys.EVAL:
-            def metric_fn(label_ids, logits,num_labels,mask):
+            def metric_fn(label_ids, logits, num_labels, mask):
                 predictions = tf.math.argmax(logits, axis=-1, output_type=tf.int32)
-                cm = metrics.streaming_confusion_matrix(label_ids, predictions, num_labels-1, weights=mask)
-                return {
-                    "confusion_matrix":cm
-                }
-                #
+                cm = metrics.streaming_confusion_matrix(label_ids, predictions, num_labels - 1, weights=mask)
+                return {"confusion_matrix": cm}
+
             eval_metrics = (metric_fn, [label_ids, logits, num_labels, mask])
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
@@ -523,31 +526,30 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     return model_fn
 
 
-def _write_base(batch_tokens,id2label,prediction,batch_labels,wf,i):
+def _write_base(batch_tokens, id2label, prediction, batch_labels, wf, i):
     token = batch_tokens[i]
     predict = id2label[prediction]
     true_l = id2label[batch_labels[i]]
-    if token!="[PAD]" and token!="[CLS]" and true_l!="X":
-        #
-        if predict=="X" and not predict.startswith("##"):
-            predict="O"
-        line = "{}\t{}\t{}\n".format(token,true_l,predict)
+    if token != "[PAD]" and token != "[CLS]" and true_l != "X":
+        if predict == "X" and not predict.startswith("##"):
+            predict = "O"
+        line = "{}\t{}\t{}\n".format(token, true_l, predict)
         wf.write(line)
 
-def Writer(output_predict_file,result,batch_tokens,batch_labels,id2label):
-    with open(output_predict_file,'w') as wf:
 
-        if  FLAGS.crf:
-            predictions  = []
-            for m,pred in enumerate(result):
+def Writer(output_predict_file, result, batch_tokens, batch_labels, id2label):
+    with open(output_predict_file, 'w') as wf:
+
+        if FLAGS.crf:
+            predictions = []
+            for m, pred in enumerate(result):
                 predictions.extend(pred)
-            for i,prediction in enumerate(predictions):
-                _write_base(batch_tokens,id2label,prediction,batch_labels,wf,i)
-                
+            for i, prediction in enumerate(predictions):
+                _write_base(batch_tokens, id2label, prediction, batch_labels, wf, i)
+
         else:
-            for i,prediction in enumerate(result):
-                _write_base(batch_tokens,id2label,prediction,batch_labels,wf,i)
-            
+            for i, prediction in enumerate(result):
+                _write_base(batch_tokens, id2label, prediction, batch_labels, wf, i)
 
 
 def main(_):
@@ -611,10 +613,9 @@ def main(_):
         eval_batch_size=FLAGS.eval_batch_size,
         predict_batch_size=FLAGS.predict_batch_size)
 
-
     if FLAGS.do_train:
         train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
-        _,_ = filed_based_convert_examples_to_features(
+        _, _ = filed_based_convert_examples_to_features(
             train_examples, label_list, FLAGS.max_seq_length, tokenizer, train_file)
         logging.info("***** Running training *****")
         logging.info("  Num examples = %d", len(train_examples))
@@ -629,7 +630,7 @@ def main(_):
     if FLAGS.do_eval:
         eval_examples = processor.get_dev_examples(FLAGS.data_dir)
         eval_file = os.path.join(FLAGS.output_dir, "eval.tf_record")
-        batch_tokens,batch_labels = filed_based_convert_examples_to_features(
+        batch_tokens, batch_labels = filed_based_convert_examples_to_features(
             eval_examples, label_list, FLAGS.max_seq_length, tokenizer, eval_file)
 
         logging.info("***** Running evaluation *****")
@@ -645,28 +646,26 @@ def main(_):
             drop_remainder=False)
         result = estimator.evaluate(input_fn=eval_input_fn)
         output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
-        with open(output_eval_file,"w") as wf:
+        with open(output_eval_file, "w"):
             logging.info("***** Eval results *****")
             confusion_matrix = result["confusion_matrix"]
-            p,r,f = metrics.calculate(confusion_matrix,len(label_list)-1)
+            p, r, f = metrics.calculate(confusion_matrix, len(label_list) - 1)
             logging.info("***********************************************")
-            logging.info("********************P = %s*********************",  str(p))
-            logging.info("********************R = %s*********************",  str(r))
-            logging.info("********************F = %s*********************",  str(f))
+            logging.info("********************P = %s*********************", str(p))
+            logging.info("********************R = %s*********************", str(r))
+            logging.info("********************F = %s*********************", str(f))
             logging.info("***********************************************")
-
 
     if FLAGS.do_predict:
-        with open(FLAGS.middle_output+'/label2id.pkl', 'rb') as rf:
+        with open(FLAGS.middle_output + '/label2id.pkl', 'rb') as rf:
             label2id = pickle.load(rf)
             id2label = {value: key for key, value in label2id.items()}
-   
+
         predict_examples = processor.get_test_examples(FLAGS.data_dir)
 
         predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
-        batch_tokens,batch_labels = filed_based_convert_examples_to_features(predict_examples, label_list,
-                                                 FLAGS.max_seq_length, tokenizer,
-                                                 predict_file)
+        batch_tokens, batch_labels = filed_based_convert_examples_to_features(
+            predict_examples, label_list, FLAGS.max_seq_length, tokenizer, predict_file)
 
         logging.info("***** Running prediction*****")
         logging.info("  Num examples = %d", len(predict_examples))
@@ -680,9 +679,9 @@ def main(_):
 
         result = estimator.predict(input_fn=predict_input_fn)
         output_predict_file = os.path.join(FLAGS.output_dir, "label_test.txt")
-        #here if the tag is "X" means it belong to its before token, here for convenient evaluate use
+        # here if the tag is "X" means it belong to its before token, here for convenient evaluate use
         # conlleval.pl we  discarding it directly
-        Writer(output_predict_file,result,batch_tokens,batch_labels,id2label)
+        Writer(output_predict_file, result, batch_tokens, batch_labels, id2label)
 
 
 if __name__ == "__main__":

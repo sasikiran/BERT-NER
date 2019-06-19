@@ -14,6 +14,7 @@ from tensorflow.python.ops import state_ops
 from tensorflow.python.ops import variable_scope
 import numpy as np
 
+
 def metric_variable(shape, dtype, validate_shape=True, name=None):
     """Create variable in `GraphKeys.(LOCAL|METRIC_VARIABLES)` collections.
     If running in a `DistributionStrategy` context, the variable will be
@@ -53,6 +54,7 @@ def metric_variable(shape, dtype, validate_shape=True, name=None):
         synchronization=variable_scope.VariableSynchronization.ON_READ,
         aggregation=variable_scope.VariableAggregation.SUM,
         name=name)
+
 
 def streaming_confusion_matrix(labels, predictions, num_classes, weights=None):
     """Calculate a streaming confusion matrix.
@@ -105,10 +107,11 @@ def calculate(total_cm, num_class):
     recalls = []
     fs = []
     for i in range(num_class):
-        rowsum, colsum = np.sum(total_cm[i]), np.sum(total_cm[r][i] for r in range(num_class))
-        precision = total_cm[i][i] / float(colsum+1e-12)
-        recall = total_cm[i][i] / float(rowsum+1e-12)
-        f = 2 * precision * recall / (precision + recall+1e-12)
+        rowsum, colsum = np.sum(total_cm[i]), np.sum(
+            total_cm[r][i] for r in range(num_class))
+        precision = total_cm[i][i] / float(colsum + 1e-12)
+        recall = total_cm[i][i] / float(rowsum + 1e-12)
+        f = 2 * precision * recall / (precision + recall + 1e-12)
         precisions.append(precision)
         recalls.append(recall)
         fs.append(f)
